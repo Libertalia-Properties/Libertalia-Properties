@@ -9,14 +9,8 @@
     "routes": [
       { "src": "/(.*)", "dest": "/api/index.js" },
       { "src": "/convert", "dest": "/api/index.js" },
-      { "src": "/listing", "dest": "/api/index.js" }
-    ],
-      "functions": {
-        "api/*": {
-          "memory": 1024,
-          "maxDuration": 90
-        }
-      }
+      { "src": "/listings", "dest": "/api/index.js" }
+    ]
 
   }
   
