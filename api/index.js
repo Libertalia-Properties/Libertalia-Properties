@@ -757,13 +757,13 @@ app.post("/listings", async (req, res) => {
     //res.json(finalPayload);
 
 
-    const filePath = path.join(__dirname, 'listing.json');
-    fs.writeFileSync(filePath, JSON.stringify(finalPayload, null, 2));
-    console.log("Payload saved to listing.json :: ", filePath);
+    //const filePath = path.join(__dirname, 'listing.json');
+    //fs.writeFileSync(filePath, JSON.stringify(finalPayload, null, 2));
+    //console.log("Payload saved to listing.json :: ", filePath);
 
 
-    //const response = await axios.post(url, finalPayload, options);
-    //res.status(response.status).json(response.data);
+    const response = await axios.post(url, finalPayload, options);
+    res.status(response.status).json(response.data);
   } catch (error) {
     console.error("Error creating listing:", error.response?.data || error.message);
     res.status(error.response?.status || 500).json(error.response?.data || { error: "Failed to create listing" });
