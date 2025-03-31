@@ -4,6 +4,10 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const morgan = require('morgan');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const sharp = require("sharp");
+
+const path = require("path");
+const fs = require("fs");
 
 require("dotenv").config();
 
@@ -60,29 +64,40 @@ async function imageToBase64(imageUrl) {
   try {
     
     const response = await axios.get(imageUrl, { 
-      responseType: "arraybuffer", 
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Access-Control-Allow-Origin': '*'
-      },
+      responseType: "arraybuffer"
     });
     
-    //const base64Image = Buffer.from(response.data, "binary").toString("base64");
-    
-    const contentType = response.headers["content-type"];
-
     let imageBuffer = Buffer.from(response.data, "binary");
     // Auto-rotate and ensure landscape orientation
         const processedImageBuffer = await sharp(imageBuffer)
-            .rotate() // Auto-rotate based on EXIF data
-            .resize({ width: 800, height: 600, fit: "cover" }) // Ensure landscape
             .toBuffer();
+
+    // Detect MIME type from headers
+    let mimeType = response.headers["content-type"];
+    console.log("MIME TYPE ::: " + JSON.stringify(mimeType));
+
+    // If MIME type is missing or incorrect, infer based on file extension
+        if (!mimeType || mimeType === "application/octet-stream") {
+            if (imageUrl.endsWith(".jpg") || imageUrl.endsWith(".jpeg")) {
+                mimeType = "image/jpeg";
+            } else if (imageUrl.endsWith(".png")) {
+                mimeType = "image/png";
+            } else if (imageUrl.endsWith(".gif")) {
+                mimeType = "image/gif";
+            } else {
+                mimeType = "image/jpeg"; // Default fallback
+            }
+        }
+
 
   const base64Image = processedImageBuffer.toString("base64");
 
 
-    return `${base64Image}`;
+    return {
+            bytes: base64Image,
+            mimeContentType: mimeType
+        };
+            
   } catch (error) {
     console.error("Error converting image:", error.message); // Only log the error message
     return null;
@@ -93,12 +108,7 @@ async function pictureToBase64(imageUrl) {
   try {
     
     const response = await axios.get(imageUrl, { 
-      responseType: "arraybuffer",
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Access-Control-Allow-Origin': '*'
-      } 
+      responseType: "arraybuffer"
     });
     
     //const base64Image = Buffer.from(response.data, "binary").toString("base64");
@@ -111,14 +121,26 @@ async function pictureToBase64(imageUrl) {
     console.error("Error converting image:", error.message); // Only log the error message
     return null;
   }
-}
+};
+
+const processImage = async (photo) => {  
+      try {
+        console.log("REQ.BODY :::: Final Photo :::::: " + JSON.stringify(photo));
+
+        const base64Image = await imageToBase64(photo);
+        return base64Image ? { bytes: base64Image.bytes, mimeContentType: base64Image.mimeContentType } : null;
+      } catch (error) {
+        console.error(`Error processing image: ${url}`, error);
+        return null; // Skip failed images
+      }
+};
 
 const processImages = async (photos) => {
   return Promise.all(
     photos.map(async (url) => {
       try {
-        const base64Image = await pictureToBase64(url);
-        return base64Image ? { bytes: base64Image } : null;
+        const base64Image = await imageToBase64(url);
+        return base64Image ? { bytes: base64Image.bytes, mimeContentType: base64Image.mimeContentType } : null;
       } catch (error) {
         console.error(`Error processing image: ${url}`, error);
         return null; // Skip failed images
@@ -127,14 +149,44 @@ const processImages = async (photos) => {
   ).then((processedPhotos) => processedPhotos.filter(photo => photo !== null)); // Remove failed conversions
 };
 
+const processPhotos = async (photos) => {
+  
+  const base64Images = await Promise.all(
+        photos.map(async (url) => {
+            return await imageToBase64(url);
+        })
+    );
+
+    // Filter out any null values (failed images)
+    return base64Images.filter(image => image !== null);
+
+};
+
+
 app.post("/convert", async (req, res) => {
-  const { imageUrl } = req.body;
+  const { imageUrl, caption } = req.body;
   if (!imageUrl) return res.status(400).json({ error: "Image URL is required" });
+  //console.log("REQ.BODY :::: req.body :::::: " + JSON.stringify(req.body));
+  //console.log("REQ.BODY :::: caption :::::: " + JSON.stringify(caption));
 
-  const base64Image = await pictureToBase64(imageUrl);
-  if (!base64Image) return res.status(500).json({ error: "Failed to convert image" });
+  //const base64Image = await imageToBase64(imageUrl);
+  //if (!base64Image) return res.status(500).json({ error: "Failed to convert image" });
+    //console.log("REQ.BODY :::: FINAL base64Image :::::: " + JSON.stringify(base64Image));
 
-  res.send(base64Image);
+
+    // Process images before making the API call
+    const finalPhoto = await processImage(imageUrl);
+    //console.log("REQ.BODY :::: FINAL finalPhoto :::::: " + JSON.stringify(finalPhoto));
+
+    // Construct final JSON payload
+    const finalPayload = {
+        ...finalPhoto,
+        caption: caption
+    };
+    //console.log("REQ.BODY :::: FINAL PAYLOAD :::::: " + JSON.stringify(finalPayload));
+    //res.json(finalPayload);
+
+  res.send(finalPayload);
   //res.json({ base64Image });
 });
 
@@ -168,11 +220,12 @@ app.post("/convertMultiple", async (req, res) => {
     const base64Images = await Promise.all(
       imageUrls.map(async (url) => {
         try {
-          const base64 = await pictureToBase64(url);
-          //console.log("url :::: " + JSON.stringify(url));
+          console.log("url :::: " + JSON.stringify(url));
           //console.log("base64 :::: " + JSON.stringify(base64));
 
-          return base64 || null;
+          // Filter out any null values (failed images)
+          return await imageToBase64(url);
+        
         } catch (error) {
           console.error(`Failed to convert image: ${url}`, error.message);
           return { url, error: "Failed to convert image" };
@@ -192,6 +245,68 @@ app.post("/convertMultiple", async (req, res) => {
     
     // Filter out null values 
     const result = base64Images.filter(Boolean);
+
+    const filePath = path.join(__dirname, 'imageBytes.json');
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
+    console.log("Payload saved to imagebytes.json :: ", filePath);
+
+    // Send as raw text (pure list of base64)
+    //res.send(result.join(","));  // Sends a newline-separated list of base64 strings
+
+    res.json(result);
+
+    //res.json(result);
+    // Convert array to string (remove brackets)
+    //const formattedResponse = base64Images.filter(Boolean).map((obj) => JSON.stringify(obj)).join(",");
+    //const formattedResponse = { photos: base64Images.filter(Boolean) };
+
+    
+    // Send response as raw JSON text
+
+    // Return only valid base64 objects
+    //res.json(base64Images.filter(Boolean));    //res.json({base64Images});
+  } catch (error) {
+    console.error("Error processing images:", error.message);
+    res.status(500).json({ error: "Failed to convert images" });
+  }
+});
+
+app.post("/converterMultiple", async (req, res) => {
+  const { imageUrls } = req.body; // Expecting an array of image URLs
+  console.log("IMAGE URLS ::: " + JSON.stringify(imageUrls));
+
+
+  if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    return res.status(400).json({ error: "At least one image URL is required" });
+  }
+
+  try {
+    // Convert each image URL to Base64
+    const base64Images = await Promise.all(
+      imageUrls.map(async (url) => {
+        try {
+          const base64 = await processImage(url);
+          //console.log("url :::: " + JSON.stringify(url));
+          //console.log("base64 :::: " + JSON.stringify(base64));
+
+          return base64 || null;
+        } catch (error) {
+          console.error(`Failed to convert image: ${url}`, error.message);
+          return { url, error: "Failed to convert image" };
+        }
+      })
+    );
+      
+ 
+    
+    // Filter out null values 
+    const result = base64Images.filter(Boolean);
+
+
+    const filePath = path.join(__dirname, 'listing.json');
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
+    console.log("Payload saved to payload.json :: ", filePath);
+
     // Send as raw text (pure list of base64)
     res.send(result.join(","));  // Sends a newline-separated list of base64 strings
 
@@ -623,7 +738,7 @@ app.post("/listings", async (req, res) => {
 
     const { photos, ...listingData } = req.body;
     //console.log("REQ.BODY :::: PHOTOS ::::::: " + JSON.stringify(photos));
-    console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
+    //console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
 
     if (!photos || !Array.isArray(photos) || photos.length === 0) {
       return res.status(400).json({ error: "No photos provided" });
@@ -641,8 +756,14 @@ app.post("/listings", async (req, res) => {
     //console.log("REQ.BODY :::: FINAL PAYLOAD :::::: " + JSON.stringify(finalPayload));
     //res.json(finalPayload);
 
-    const response = await axios.post(url, finalPayload, options);
-    res.status(response.status).json(response.data);
+
+    const filePath = path.join(__dirname, 'listing.json');
+    fs.writeFileSync(filePath, JSON.stringify(finalPayload, null, 2));
+    console.log("Payload saved to listing.json :: ", filePath);
+
+
+    //const response = await axios.post(url, finalPayload, options);
+    //res.status(response.status).json(response.data);
   } catch (error) {
     console.error("Error creating listing:", error.response?.data || error.message);
     res.status(error.response?.status || 500).json(error.response?.data || { error: "Failed to create listing" });
