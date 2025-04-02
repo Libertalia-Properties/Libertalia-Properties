@@ -820,7 +820,7 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
 
     const options = {
       params: {
-        listingNumber: req.params.listingNumber, 
+        listingNumber: listingNumber, 
         listingStatus: listingStatus 
       },
       headers: {
