@@ -128,6 +128,8 @@ const processImage = async (photo) => {
         console.log("REQ.BODY :::: Final Photo :::::: " + JSON.stringify(photo));
 
         const base64Image = await imageToBase64(photo);
+        console.log("Received image size:", Buffer.byteLength(base64Image.bytes, "base64"), "bytes");
+
         return base64Image ? { bytes: base64Image.bytes, mimeContentType: base64Image.mimeContentType } : null;
       } catch (error) {
         console.error(`Error processing image: ${url}`, error);
@@ -246,9 +248,9 @@ app.post("/convertMultiple", async (req, res) => {
     // Filter out null values 
     const result = base64Images.filter(Boolean);
 
-    const filePath = path.join(__dirname, 'imageBytes.json');
-    fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
-    console.log("Payload saved to imagebytes.json :: ", filePath);
+    //const filePath = path.join(__dirname, 'imageBytes.json');
+    //fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
+    //console.log("Payload saved to imagebytes.json :: ", filePath);
 
     // Send as raw text (pure list of base64)
     //res.send(result.join(","));  // Sends a newline-separated list of base64 strings
@@ -590,11 +592,14 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
     
     const { agentId } = req.params;
     console.log("AGENT ID :: " + agentId);
-    const { bytes,mimeContentType, caption } = req.body;
-    //console.log("REQ BODY :: " + JSON.stringify(req.body));
+    
+    const { imageUrl, caption } = req.body;
+    console.log("REQ BODY :: " + JSON.stringify(req.body));
+    console.log("IMAGE URL :: " + JSON.stringify(imageUrl));
+    console.log("CAPTION :: " + JSON.stringify(caption));
 
-    console.log("Received image size:", Buffer.byteLength(bytes, "base64"), "bytes");
-
+    
+    
     const url = `${PROPERTY24_API_BASE}/agents/${agentId}/profile-picture`;
 
     const options = {
@@ -603,22 +608,28 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-  };
+    };
        
       //console.log("REQ PROTOCOL :: " + (req.protocol)); 
       //console.log("RES HOSTNAME :: " + (req.hostname)); 
       //console.log("REQ PATH :: " + (req.path)); 
       //console.log("REQ ORIGINAL URL :: " + (req.originalUrl)); 
       //console.log("REQ SUBDOMAINS :: " + (req.subdomains)); 
-      
-      const payload = {
-        bytes: bytes, // The image data in base64 or raw bytes
-        mimeContentTyp: mimeContentType,
-        caption: caption,
-      };
 
-      const response = await axios.put(url,payload, options)
-              .then(function (response) {
+      // Process images before making the API call
+    const finalPhoto = await processImage(imageUrl);
+    //console.log("REQ.BODY :::: FINAL finalPhoto :::::: " + JSON.stringify(finalPhoto));
+
+    // Construct final JSON payload
+    const finalPayload = {
+        ...finalPhoto,
+        caption: caption
+    };
+      
+    res.json(finalPayload);
+
+    const response = await axios.put(url,finalPayload, options)
+            .then(function (response) {
                   //console.log("Property24 RESPONSE ::: " + JSON.stringify(response.data));
                    //console.log("RESPONSE HEADERS :::: " + response.headers);
                   //console.log("RESPONSE STATUS :::: " + response.status);
@@ -631,7 +642,7 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
               .catch(function (error) {
                   console.error(error);
               });
-              //res.status(response.status).json(response.data);
+          //res.status(response.status).json(response.data);
 
               //res.json(response.data);
 
