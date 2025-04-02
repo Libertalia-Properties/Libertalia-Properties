@@ -741,8 +741,8 @@ app.post("/listings", async (req, res) => {
     };
 
     const { photos, ...listingData } = req.body;
-    //console.log("REQ.BODY :::: PHOTOS ::::::: " + JSON.stringify(photos));
-    //console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
+    console.log("REQ.BODY :::: PHOTOS ::::::: " + JSON.stringify(photos));
+    console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
 
     if (!photos || !Array.isArray(photos) || photos.length === 0) {
       return res.status(400).json({ error: "No photos provided" });
