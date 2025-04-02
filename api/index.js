@@ -640,7 +640,7 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
               .catch(function (error) {
                   console.error(error);
               });
-      res.status(response.status).json(response.data);
+      //res.status(response.status).json(response.data);
 
   } catch(error) {
       console.log("ERROR :::: " + error);
