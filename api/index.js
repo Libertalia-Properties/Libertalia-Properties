@@ -89,9 +89,7 @@ async function imageToBase64(imageUrl) {
             }
         }
 
-
-  const base64Image = processedImageBuffer.toString("base64");
-
+    const base64Image = processedImageBuffer.toString("base64");
 
     return {
             bytes: base64Image,
@@ -100,7 +98,7 @@ async function imageToBase64(imageUrl) {
             
   } catch (error) {
     console.error("Error converting image:", error.message); // Only log the error message
-    return null;
+    return error.message;
   }
 }
 
@@ -125,15 +123,15 @@ async function pictureToBase64(imageUrl) {
 
 const processImage = async (photo) => {  
       try {
-        console.log("REQ.BODY :::: Final Photo :::::: " + JSON.stringify(photo));
+        //console.log("REQ.BODY :::: Final Photo :::::: " + JSON.stringify(photo));
 
         const base64Image = await imageToBase64(photo);
         console.log("Received image size:", Buffer.byteLength(base64Image.bytes, "base64"), "bytes");
 
         return base64Image ? { bytes: base64Image.bytes, mimeContentType: base64Image.mimeContentType } : null;
       } catch (error) {
-        console.error(`Error processing image: ${url}`, error);
-        return null; // Skip failed images
+        console.error(`Error processing image: `, error);
+        return error.message; // Skip failed images
       }
 };
 
@@ -637,21 +635,16 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
                   //console.log("RESPONSE REQUEST :::: " + (response.request).json);
                   //console.log("RESPONSE STATUS TEXT :::: " + response.statusText);
                   
-                  res.status(response.status).json(response.data);
+                  //res.status(response.status).json(response.data);
               })
               .catch(function (error) {
                   console.error(error);
               });
-          //res.status(response.status).json(response.data);
-
-              //res.json(response.data);
-
-          next();
+      res.status(response.status).json(response.data);
 
   } catch(error) {
-
-      console.log("ERROR :::: " + error)
-      res.status(500).json({ message: error });
+      console.log("ERROR :::: " + error);
+      //res.status(500).json({ message: error }); 
   }
 });
 
