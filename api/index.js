@@ -820,7 +820,7 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
 
     const options = {
       params: {
-        listingNumber: req.query.listingNumber, 
+        listingNumber: req.params.listingNumber, 
         listingStatus: req.query.listingStatus 
       },
       headers: {
@@ -836,7 +836,7 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
       //console.log("REQ ORIGINAL URL :: " + (req.originalUrl)); 
       //console.log("REQ SUBDOMAINS :: " + (req.subdomains)); 
       
-      const response = await axios.put(url, options);
+      const response = await axios.put(url,listingStatus, options);
       res.status(response.status).json(response.data);
 
               //res.json(response.data);
