@@ -809,20 +809,19 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
   try {
       
     
-    const { listingNumber, listingStatus  } = req.params;
+    const { listingNumber } = req.params;
     console.log("req.params ::: " + JSON.stringify(req.params));
     console.log("Listing Number :: " + JSON.stringify(listingNumber));
-    console.log("Listing Status :: " + JSON.stringify(listingStatus));
 
-    //const { status } = req.query;
-    //console.log("req.query :: " + JSON.stringify(req.query));
+    const { listingStatus } = req.query;
+    console.log("req.query :: " + JSON.stringify(req.query));
 
     const url = `${PROPERTY24_API_BASE}/listings/${listingNumber}/status`;
 
     const options = {
       params: {
         listingNumber: req.params.listingNumber, 
-        listingStatus: req.params.listingStatus 
+        listingStatus: listingStatus 
       },
       headers: {
         Authorization: getAuthHeader(), // Fix authentication
@@ -837,7 +836,7 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
       //console.log("REQ ORIGINAL URL :: " + (req.originalUrl)); 
       //console.log("REQ SUBDOMAINS :: " + (req.subdomains)); 
       
-      const response = await axios.put(url, req.params, options);
+      const response = await axios.put(url, options);
       res.status(response.status).json(response.data);
 
               //res.json(response.data);
