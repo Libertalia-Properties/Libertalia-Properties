@@ -820,8 +820,8 @@ app.put("/listings/:listingNumber/status", async (req, res, next) => {
 
     const options = {
       params: {
-        listingNumber: listingNumber, 
-        listingStatus: listingStatus 
+        listingNumber: req.query.listingNumber, 
+        listingStatus: req.query.listingStatus 
       },
       headers: {
         Authorization: getAuthHeader(), // Fix authentication
