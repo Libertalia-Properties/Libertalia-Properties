@@ -638,13 +638,13 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
                   //console.log("RESPONSE CONFIG :::: " + JSON.stringify(response.config));
                   //console.log("RESPONSE REQUEST :::: " + (response.request).json);
                   //console.log("RESPONSE STATUS TEXT :::: " + response.statusText);
-                  
+                  res.status(response.status).json(response);
+
               })
               .catch(function (error) {
                   console.error(error);
               });
       //res.status(response.status).json(response.data);
-      res.status(response.status).json(response);
 
   } catch(error) {
       console.log("ERROR :::: " + error);
