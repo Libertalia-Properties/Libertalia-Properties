@@ -629,16 +629,17 @@ app.put("/agents/:agentId/profile-picture", async (req, res, next) => {
     };
       
     //res.json(finalPayload);
+    console.log("FINAL payload :::::: " + JSON.stringify(finalPayload));
 
     const response = await axios.put(url,finalPayload, options)
             .then(function (response) {
-                  console.log("Property24 RESPONSE ::: " + JSON.stringify(response));
+                  console.log("Property24 RESPONSE ::: " + JSON.stringify(response.data));
                    //console.log("RESPONSE HEADERS :::: " + response.headers);
                   //console.log("RESPONSE STATUS :::: " + response.status);
                   //console.log("RESPONSE CONFIG :::: " + JSON.stringify(response.config));
                   //console.log("RESPONSE REQUEST :::: " + (response.request).json);
                   //console.log("RESPONSE STATUS TEXT :::: " + response.statusText);
-                  res.status(response.status).json(response);
+                  res.status(response.status).json(response.data);
 
               })
               .catch(function (error) {
