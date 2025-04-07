@@ -91,11 +91,8 @@ async function imageToBase64(imageUrl) {
 
     const base64Image = processedImageBuffer.toString("base64");
 
-    return {
-            bytes: base64Image,
-            mimeContentType: mimeType
-        };
-            
+    return {bytes:base64Image};
+
   } catch (error) {
     console.error("Error converting image:", error.message); // Only log the error message
     return error.message;
@@ -136,9 +133,11 @@ const processImage = async (photo) => {
 };
 
 const processImages = async (photos) => {
-  return Promise.all(
+  const processedPhotos = await Promise.all(
+    
     photos.map(async (url) => {
       try {
+        console.log("url ::: ", url);
         const base64Image = await imageToBase64(url);
         return base64Image ? { bytes: base64Image.bytes, mimeContentType: base64Image.mimeContentType } : null;
       } catch (error) {
@@ -146,7 +145,12 @@ const processImages = async (photos) => {
         return null; // Skip failed images
       }
     })
-  ).then((processedPhotos) => processedPhotos.filter(photo => photo !== null)); // Remove failed conversions
+  )
+  const validPhotos = processedPhotos.filter(photo => photo && photo.bytes);
+  
+  // Join the image objects as comma-separated string
+  return validPhotos;
+
 };
 
 const processPhotos = async (photos) => {
@@ -742,7 +746,7 @@ app.post("/listings", async (req, res) => {
 
     const { photos, ...listingData } = req.body;
     console.log("REQ.BODY :::: PHOTOS ::::::: " + JSON.stringify(photos));
-    console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
+    //console.log("REQ.BODY :::: LISTING DATA :::::: " + JSON.stringify(listingData));
 
     if (!photos || !Array.isArray(photos) || photos.length === 0) {
       return res.status(400).json({ error: "No photos provided" });
@@ -764,7 +768,7 @@ app.post("/listings", async (req, res) => {
     //const filePath = path.join(__dirname, 'listing.json');
     //fs.writeFileSync(filePath, JSON.stringify(finalPayload, null, 2));
     //console.log("Payload saved to listing.json :: ", filePath);
-
+    //res.send((finalPayload));
 
     const response = await axios.post(url, finalPayload, options);
     res.status(response.status).json(response.data);
